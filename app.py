@@ -86,9 +86,7 @@ else:
 g1 = personas[:size_g1]
 g2 = personas[size_g1:]
 
-        score = 0
-
-        for grupo in [g1, g2]:
+            for grupo in [g1, g2]:
             for a, b in combinations(grupo, 2):
                 clave = tuple(sorted([a, b]))
                 score += conteo.get(clave, 0)
