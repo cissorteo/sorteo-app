@@ -134,16 +134,14 @@ st.subheader("👥 Personas")
 
 personas = get_personas()
 
-# INPUT + ENTER + SUGERENCIAS
-personas_existentes = personas
-
+# INPUT con ENTER (sin sugerencias)
 if "nuevo_nombre" not in st.session_state:
     st.session_state.nuevo_nombre = ""
 
 def añadir_persona():
     nombre = st.session_state.nuevo_nombre.strip()
     if nombre != "":
-        if nombre not in personas_existentes:
+        if nombre not in personas:
             add_persona(nombre)
         st.session_state.nuevo_nombre = ""
 
@@ -154,11 +152,20 @@ st.text_input(
     on_change=añadir_persona
 )
 
-st.caption("Sugerencias:")
-for p in personas_existentes[:10]:
-    if st.button(p, key=f"sug_{p}"):
-        add_persona(p)
-        st.rerun()
+# LISTA + BORRAR
+st.markdown('<div class="card"><div class="card-title">Lista</div>', unsafe_allow_html=True)
+
+if personas:
+    for p in personas:
+        col1, col2 = st.columns([4,1])
+        col1.markdown(f"• {p}")
+        if col2.button("❌", key=f"del_person_{p}"):
+            delete_persona(p)
+            st.rerun()
+else:
+    st.write("Aún no hay personas")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # 🔥 LISTA + BORRAR (ESTO ES LO IMPORTANTE)
 st.markdown('<div class="card"><div class="card-title">Lista</div>', unsafe_allow_html=True)
