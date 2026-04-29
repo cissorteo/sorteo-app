@@ -139,19 +139,22 @@ hist = get_historial()
 if not hist:
     st.info("No hay historial aún")
 else:
-for i, (fecha, g1, g2) in enumerate(reversed(hist)):
+    for i, (fecha, g1, g2) in enumerate(reversed(hist)):
     col1, col2 = st.columns([4,1])
 
-with col1:
-    st.write(f"**{fecha}**")
-    st.write("Grupo 1:", g1)
-    st.write("Grupo 2:", g2)
+    with col1:
+         st.write(f"**{fecha}**")
+         st.write("Grupo 1:", g1)
+         st.write("Grupo 2:", g2)
 
-with col2:
-    if st.button("❌", key=f"del_{i}"):
-        c.execute("DELETE FROM historial WHERE fecha=? AND grupo1=? AND grupo2=?", (fecha, g1, g2))
-        conn.commit()
-        st.rerun()
+    with col2:
+        if st.button("❌", key=f"del_{i}"):
+            c.execute(
+                "DELETE FROM historial WHERE fecha=? AND grupo1=? AND grupo2=?", 
+                (fecha, g1, g2)
+            )
+            conn.commit()
+            st.rerun()
 
 st.write("---")
 
