@@ -133,22 +133,32 @@ st.title("🎲 Sorteo de grupos turnos desayuno")
 st.subheader("👥 Personas")
 personas = get_personas()
 
-col1, col2 = st.columns([3,1])
-with col1:
-    nueva = st.text_input("Añadir persona", placeholder="Escribe un nombre…")
-with col2:
-    if st.button("➕ Añadir"):
-        add_persona(nueva)
-        st.rerun()
+personas_existentes = get_personas()
 
-st.markdown('<div class="card"><div class="card-title">Lista</div>', unsafe_allow_html=True)
-if personas:
-    for p in personas:
-        c1, c2 = st.columns([4,1])
-        c1.markdown(f"• {p}")
-        if c2.button("❌", key=f"del_person_{p}"):
-            delete_persona(p)
-            st.rerun()
+# Input con ENTER
+if "nuevo_nombre" not in st.session_state:
+    st.session_state.nuevo_nombre = ""
+
+def añadir_persona():
+    nombre = st.session_state.nuevo_nombre.strip()
+    if nombre != "":
+        if nombre not in personas_existentes:
+            add_persona(nombre)
+        st.session_state.nuevo_nombre = ""
+
+st.text_input(
+    "Añadir persona",
+    key="nuevo_nombre",
+    placeholder="Escribe un nombre y pulsa ENTER",
+    on_change=añadir_persona
+)
+
+# Sugerencias clicables
+st.caption("Sugerencias:")
+for p in personas_existentes[:10]:
+    if st.button(p, key=f"sug_{p}"):
+        add_persona(p)
+        st.rerun()
 else:
     st.write("Aún no hay personas")
 st.markdown('</div>', unsafe_allow_html=True)
