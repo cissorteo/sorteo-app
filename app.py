@@ -66,34 +66,39 @@ def generar():
 
     if len(personas) != 7:
         return None, None, None
-    conteo = coincidencias()
-    mejor = None
-    mejor_score = float("inf")
 
-    for _ in range(3000):
-        random.shuffle(personas)
-# Alternar tamaños según historial
-hist = get_historial()
-total = len(hist)
+    hist = get_historial()
+    total = len(hist)
 
-if total % 2 == 0:
-    size_g1 = 3
-    size_g2 = 4
-else:
-    size_g1 = 4
-    size_g2 = 3
+    # Alternar tamaños
+    if total % 2 == 0:
+        size_g1 = 3
+        size_g2 = 4
+    else:
+        size_g1 = 4
+        size_g2 = 3
 
-g1 = personas[:size_g1]
-g2 = personas[size_g1:]
+conteo = coincidencias()
+mejor = None
+mejor_score = float("inf")
 
-            for grupo in [g1, g2]:
-            for a, b in combinations(grupo, 2):
-                clave = tuple(sorted([a, b]))
-                score += conteo.get(clave, 0)
+for _ in range(3000):
+    random.shuffle(personas)
 
-        if score < mejor_score:
-            mejor_score = score
-            mejor = (g1[:], g2[:])
+    g1 = personas[:size_g1]
+    g2 = personas[size_g1:]
+
+    score = 0
+
+    # Penalizar parejas repetidas
+    for grupo in [g1, g2]:
+        for a, b in combinations(grupo, 2):
+            clave = tuple(sorted([a, b]))
+            score += conteo.get(clave, 0)
+
+    if score < mejor_score:
+        mejor_score = score
+        mejor = (g1[:], g2[:])
 
     if mejor:
         fecha = datetime.now().strftime('%Y-%m-%d')
@@ -101,6 +106,7 @@ g2 = personas[size_g1:]
         return fecha, mejor[0], mejor[1]
 
     return None, None, None
+
 
 # ---------- UI ----------
 st.title("🎲 Sorteo Turnos de Desayuno")
