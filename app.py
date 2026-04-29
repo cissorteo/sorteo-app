@@ -136,6 +136,9 @@ st.subheader("📜 Historial")
 
 hist = get_historial()
 
+if not hist:
+    st.info("No hay historial aún")
+else:
 for i, (fecha, g1, g2) in enumerate(reversed(hist)):
     col1, col2 = st.columns([4,1])
 
