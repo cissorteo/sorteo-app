@@ -211,11 +211,9 @@ else:
 
         col1, col2 = st.columns([4,1])
         col1.write(f"**{fecha}**")
-        
-        col1.write("Grupo 2:
         col1.write(f"Grupo 1: {g1}")
         col1.write(f"Grupo 2: {g2}")
-
+        
         if col2.button("❌", key=f"h_{i}"):
             c.execute(
                 "DELETE FROM historial WHERE fecha=? AND grupo1=? AND grupo2=?",
