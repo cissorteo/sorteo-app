@@ -5,34 +5,35 @@ from datetime import datetime
 from itertools import combinations
 
 # ---------- CONFIG ----------
-st.set_page_config(page_title="Sorteo turnos desayuno", page_icon="🎲", layout="centered")
+st.set_page_config(page_title="Sorteo PRO", page_icon="🎲", layout="centered")
 
-# ---------- ESTILOS (premium) ----------
+# ---------- ESTILOS ----------
 st.markdown("""
 <style>
 html, body, [data-testid="stAppViewContainer"] { background:#f6f8fb; }
 .main .block-container { max-width:760px; padding-top:1.2rem; }
-h1 { text-align:center; font-weight:800; letter-spacing:.2px; }
+h1 { text-align:center; font-weight:800; }
 
 .stButton>button {
   width:100%; height:56px; border-radius:14px; font-size:18px; font-weight:700;
-  background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border:none;
+  background:linear-gradient(135deg,#4f46e5,#7c3aed); color:white; border:none;
 }
-.stButton>button:hover { filter:brightness(1.06); }
 
 .card {
-  background:#fff; border-radius:16px; padding:16px; margin-bottom:12px;
-  box-shadow:0 8px 22px rgba(0,0,0,.06);
+  background:white; border-radius:16px; padding:16px; margin-bottom:12px;
+  box-shadow:0 8px 22px rgba(0,0,0,0.06);
 }
-.card-title { font-weight:800; margin-bottom:8px; }
+
+.card-title { font-weight:700; margin-bottom:8px; }
 
 .chip {
-  display:inline-block; padding:6px 10px; margin:4px 6px 0 0;
-  border-radius:999px; background:#eef2ff; color:#3730a3; font-weight:600; font-size:13px;
+  display:inline-block;
+  padding:6px 10px;
+  margin:4px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#3730a3;
 }
-
-hr { border:none; height:1px; background:#e5e7eb; margin:1rem 0; }
-.small { color:#6b7280; font-size:12px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,10 +57,8 @@ def get_personas():
     return [x[0] for x in c.fetchall()]
 
 def add_persona(nombre):
-    if nombre.strip() == "":
-        return
     try:
-        c.execute("INSERT INTO personas VALUES (?)", (nombre.strip(),))
+        c.execute("INSERT INTO personas VALUES (?)", (nombre,))
         conn.commit()
     except:
         pass
@@ -80,23 +79,22 @@ def guardar_historial(fecha, g1, g2):
     conn.commit()
 
 def coincidencias():
-    """Cuenta cuántas veces han coincidido las parejas en el historial."""
     hist = get_historial()
     conteo = {}
+
     for _, g1, g2 in hist:
         grupos = [g1.split(","), g2.split(",")]
         for grupo in grupos:
             for a, b in combinations(grupo, 2):
                 clave = tuple(sorted([a, b]))
                 conteo[clave] = conteo.get(clave, 0) + 1
+
     return conteo
 
 def generar(size_g1):
-    """Genera grupos con tamaño flexible y equilibrio de parejas."""
     personas = get_personas()
     n = len(personas)
 
-    # Necesitamos al menos 2 personas y que el tamaño tenga sentido
     if n < 2 or size_g1 < 1 or size_g1 >= n:
         return None, None, None
 
@@ -106,6 +104,7 @@ def generar(size_g1):
 
     for _ in range(3000):
         random.shuffle(personas)
+
         g1 = personas[:size_g1]
         g2 = personas[size_g1:]
 
@@ -120,30 +119,28 @@ def generar(size_g1):
             mejor = (g1[:], g2[:])
 
     if mejor:
-        fecha = datetime.now().strftime('%d/%m/%Y %H:%M')
+        fecha = datetime.now().strftime('%d/%m/%Y')
         guardar_historial(fecha, mejor[0], mejor[1])
         return fecha, mejor[0], mejor[1]
 
     return None, None, None
 
 # ---------- UI ----------
-st.title("🎲 Sorteo de grupos turnos desayuno")
+st.title("🎲 Sorteo de grupos")
 
-# ----- PERSONAS -----
+# PERSONAS
 st.subheader("👥 Personas")
 
 personas = get_personas()
 
-# INPUT con ENTER (sin sugerencias)
 if "nuevo_nombre" not in st.session_state:
     st.session_state.nuevo_nombre = ""
 
 def añadir_persona():
     nombre = st.session_state.nuevo_nombre.strip()
-    if nombre != "":
-        if nombre not in personas:
-            add_persona(nombre)
-        st.session_state.nuevo_nombre = ""
+    if nombre != "" and nombre not in personas:
+        add_persona(nombre)
+    st.session_state.nuevo_nombre = ""
 
 st.text_input(
     "Añadir persona",
@@ -152,124 +149,78 @@ st.text_input(
     on_change=añadir_persona
 )
 
-# LISTA + BORRAR
+# LISTA
 st.markdown('<div class="card"><div class="card-title">Lista</div>', unsafe_allow_html=True)
 
 if personas:
     for p in personas:
         col1, col2 = st.columns([4,1])
-        col1.markdown(f"• {p}")
-        if col2.button("❌", key=f"del_person_{p}"):
+        col1.write(p)
+        if col2.button("❌", key=f"del_{p}"):
             delete_persona(p)
             st.rerun()
 else:
-    st.write("Aún no hay personas")
+    st.write("No hay personas")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 🔥 LISTA + BORRAR (ESTO ES LO IMPORTANTE)
-st.markdown('<div class="card"><div class="card-title">Lista</div>', unsafe_allow_html=True)
-
-if personas:
-    for p in personas:
-        col1, col2 = st.columns([4,1])
-        col1.markdown(f"• {p}")
-        if col2.button("❌", key=f"del_person_{p}"):
-            delete_persona(p)
-            st.rerun()
-else:
-    st.write("Aún no hay personas")
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ----- CONFIGURACIÓN DE GRUPOS -----
-st.subheader("⚙️ Configuración de grupos")
+# CONFIG
+st.subheader("⚙️ Tamaño de grupos")
 
 n = len(personas)
-hist = get_historial()
-total = len(hist)
-
-modo = st.radio(
-    "Modo de tamaño",
-    ["Automático (equilibrado)", "Elegir tamaño del Grupo 1"],
-    horizontal=True
-)
 
 if n >= 2:
-    if modo == "Automático (equilibrado)":
-        # Reparte lo más equilibrado posible
-        base = n // 2
-        # Alterna quién es el grupo grande
-        if n % 2 == 0:
-            size_g1 = base
-        else:
-            size_g1 = base if (total % 2 == 0) else base + 1
-
-        st.markdown(
-            f'<div class="card small">Se generará automáticamente: '
-            f'Grupo 1 = {size_g1} | Grupo 2 = {n - size_g1}</div>',
-            unsafe_allow_html=True
-        )
-    else:
-        size_g1 = st.slider(
-            "Tamaño del Grupo 1",
-            min_value=1,
-            max_value=max(1, n-1),
-            value=min(max(1, n//2), n-1)
-        )
+    size_g1 = st.slider("Grupo 1", 1, n-1, n//2)
 else:
     size_g1 = 1
 
-# ----- GENERAR -----
+# GENERAR
 st.divider()
+
 if st.button("🎲 Generar sorteo"):
     fecha, g1, g2 = generar(size_g1)
 
     if fecha:
         st.success(f"Sorteo: {fecha}")
 
-        # Grupo 1
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown(f'<div class="card-title">Grupo 1 ({len(g1)})</div>', unsafe_allow_html=True)
         for p in g1:
-            st.markdown(f'<span class="chip">✅ {p}</span>', unsafe_allow_html=True)
+            st.markdown(f'<span class="chip">{p}</span>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Grupo 2
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown(f'<div class="card-title">Grupo 2 ({len(g2)})</div>', unsafe_allow_html=True)
         for p in g2:
-            st.markdown(f'<span class="chip">🔹 {p}</span>', unsafe_allow_html=True)
+            st.markdown(f'<span class="chip">{p}</span>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.error("Configuración no válida")
 
-# ----- HISTORIAL -----
+# HISTORIAL
 st.divider()
 st.subheader("📜 Historial")
 
 hist = get_historial()
 
 if not hist:
-    st.info("No hay historial aún")
+    st.info("No hay historial")
 else:
     for i, (fecha, g1, g2) in enumerate(reversed(hist)):
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
         col1, col2 = st.columns([4,1])
-        with col1:
-            st.markdown(f"<b>{fecha}</b>", unsafe_allow_html=True)
-            st.markdown(f"<div>Grupo 1: {g1}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div>Grupo 2: {g2}</div>", unsafe_allow_html=True)
+        col1.write(f"**{fecha}**")
+        col1.write("Grupo 1:", g1)
+        col1.write("Grupo 2:", g2)
 
-        with col2:
-            if st.button("❌", key=f"del_hist_{i}"):
-                c.execute(
-                    "DELETE FROM historial WHERE fecha=? AND grupo1=? AND grupo2=?",
-                    (fecha, g1, g2)
-                )
-                conn.commit()
-                st.rerun()
+        if col2.button("❌", key=f"h_{i}"):
+            c.execute(
+                "DELETE FROM historial WHERE fecha=? AND grupo1=? AND grupo2=?",
+                (fecha, g1, g2)
+            )
+            conn.commit()
+            st.rerun()
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -277,19 +228,20 @@ else:
 if st.button("🗑️ Borrar todo el historial"):
     c.execute("DELETE FROM historial")
     conn.commit()
-    st.success("Historial borrado")
     st.rerun()
 
-# ----- ESTADÍSTICAS -----
+# STATS
 st.divider()
 st.subheader("📊 Estadísticas")
 
 stats = coincidencias()
 
 st.markdown('<div class="card">', unsafe_allow_html=True)
+
 if stats:
     for (a, b), n in sorted(stats.items(), key=lambda x: -x[1])[:10]:
         st.write(f"{a} - {b}: {n} veces")
 else:
-    st.write("Sin datos aún")
+    st.write("Sin datos")
+
 st.markdown('</div>', unsafe_allow_html=True)
