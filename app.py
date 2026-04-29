@@ -94,7 +94,7 @@ def generar():
     return None, None, None
 
 # ---------- UI ----------
-st.title("🎲 Sorteo Nivel DIOS")
+st.title("🎲 Sorteo Turnos de Desayuno")
 
 # PERSONAS
 st.subheader("👥 Personas")
