@@ -107,7 +107,6 @@ for _ in range(3000):
 
     return None, None, None
 
-
 # ---------- UI ----------
 st.title("🎲 Sorteo Turnos de Desayuno")
 
