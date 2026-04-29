@@ -5,7 +5,7 @@ from datetime import datetime
 from itertools import combinations
 
 # ---------- CONFIG ----------
-st.set_page_config(page_title="Sorteo PRO+", page_icon="🎲", layout="centered")
+st.set_page_config(page_title="Sorteo turnos desayuno", page_icon="🎲", layout="centered")
 
 # ---------- ESTILOS (premium) ----------
 st.markdown("""
