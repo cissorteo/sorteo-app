@@ -78,34 +78,34 @@ def generar():
         size_g1 = 4
         size_g2 = 3
 
-conteo = coincidencias()
-mejor = None
-mejor_score = float("inf")
-
-for _ in range(3000):
-    random.shuffle(personas)
-
-    g1 = personas[:size_g1]
-    g2 = personas[size_g1:]
-
-    score = 0
-
-    # Penalizar parejas repetidas
-    for grupo in [g1, g2]:
-        for a, b in combinations(grupo, 2):
-            clave = tuple(sorted([a, b]))
-            score += conteo.get(clave, 0)
-
-    if score < mejor_score:
-        mejor_score = score
-        mejor = (g1[:], g2[:])
-
-    if mejor:
-        fecha = datetime.now().strftime('%Y-%m-%d')
-        guardar_historial(fecha, mejor[0], mejor[1])
-        return fecha, mejor[0], mejor[1]
-
-    return None, None, None
+       conteo = coincidencias()
+       mejor = None
+       mejor_score = float("inf")
+       
+       for _ in range(3000):
+           random.shuffle(personas)
+       
+           g1 = personas[:size_g1]
+           g2 = personas[size_g1:]
+       
+           score = 0
+       
+           # Penalizar parejas repetidas
+           for grupo in [g1, g2]:
+               for a, b in combinations(grupo, 2):
+                   clave = tuple(sorted([a, b]))
+                   score += conteo.get(clave, 0)
+       
+           if score < mejor_score:
+               mejor_score = score
+               mejor = (g1[:], g2[:])
+       
+           if mejor:
+               fecha = datetime.now().strftime('%Y-%m-%d')
+               guardar_historial(fecha, mejor[0], mejor[1])
+               return fecha, mejor[0], mejor[1]
+       
+           return None, None, None
 
 # ---------- UI ----------
 st.title("🎲 Sorteo Turnos de Desayuno")
