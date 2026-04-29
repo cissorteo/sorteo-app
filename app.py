@@ -72,8 +72,19 @@ def generar():
 
     for _ in range(3000):
         random.shuffle(personas)
-        g1 = personas[:3]
-        g2 = personas[3:]
+# Alternar tamaños según historial
+hist = get_historial()
+total = len(hist)
+
+if total % 2 == 0:
+    size_g1 = 3
+    size_g2 = 4
+else:
+    size_g1 = 4
+    size_g2 = 3
+
+g1 = personas[:size_g1]
+g2 = personas[size_g1:]
 
         score = 0
 
