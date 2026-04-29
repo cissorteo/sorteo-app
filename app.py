@@ -120,7 +120,7 @@ def generar(size_g1):
             mejor = (g1[:], g2[:])
 
     if mejor:
-        fecha = datetime.now().strftime('%Y-%m-%d')
+        fecha = datetime.now().strftime('%d-%m-%Y")
         guardar_historial(fecha, mejor[0], mejor[1])
         return fecha, mejor[0], mejor[1]
 
