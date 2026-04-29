@@ -126,7 +126,7 @@ def generar(size_g1):
     return None, None, None
 
 # ---------- UI ----------
-st.title("🎲 Sorteo de grupos")
+st.title("🎲 Sorteo de grupos desayuno")
 
 # PERSONAS
 st.subheader("👥 Personas")
