@@ -1,110 +1,81 @@
 import streamlit as st
+from supabase import create_client
 import random
-import sqlite3
 from datetime import datetime
 from itertools import combinations
 
-# ---------- CONFIG ----------
-st.set_page_config(page_title="Sorteo PRO", page_icon="🎲", layout="centered")
+# -------- CONFIG --------
+st.set_page_config(page_title="Sorteo Pro", page_icon="🎲")
 
-# ---------- ESTILOS ----------
-st.markdown("""
-<style>
-html, body, [data-testid="stAppViewContainer"] { background:#f6f8fb; }
-.main .block-container { max-width:760px; padding-top:1.2rem; }
-h1 { text-align:center; font-weight:800; }
-
-.stButton>button {
-  width:100%; height:56px; border-radius:14px; font-size:18px; font-weight:700;
-  background:linear-gradient(135deg,#4f46e5,#7c3aed); color:white; border:none;
-}
-
-.card {
-  background:white; border-radius:16px; padding:16px; margin-bottom:12px;
-  box-shadow:0 8px 22px rgba(0,0,0,0.06);
-}
-
-.card-title { font-weight:700; margin-bottom:8px; }
-
-.chip {
-  display:inline-block;
-  padding:6px 10px;
-  margin:4px;
-  border-radius:999px;
-  background:#eef2ff;
-  color:#3730a3;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------- DB ----------
-conn = sqlite3.connect("database.db", check_same_thread=False)
-c = conn.cursor()
-
-c.execute("CREATE TABLE IF NOT EXISTS personas (nombre TEXT UNIQUE)")
-c.execute("""
-CREATE TABLE IF NOT EXISTS historial (
-    fecha TEXT,
-    grupo1 TEXT,
-    grupo2 TEXT
+# -------- CONEXIÓN --------
+supabase = create_client(
+    st.secrets["SUPABASE_URL"],
+    st.secrets["SUPABASE_KEY"]
 )
-""")
-conn.commit()
 
-# ---------- FUNCIONES ----------
+# -------- FUNCIONES --------
+
+# PERSONAS
 def get_personas():
-    c.execute("SELECT nombre FROM personas")
-    return [x[0] for x in c.fetchall()]
+    res = supabase.table("personas").select("nombre").execute()
+    return [x["nombre"] for x in res.data]
 
 def add_persona(nombre):
     try:
-        c.execute("INSERT INTO personas VALUES (?)", (nombre,))
-        conn.commit()
+        supabase.table("personas").insert({"nombre": nombre}).execute()
     except:
         pass
 
 def delete_persona(nombre):
-    c.execute("DELETE FROM personas WHERE nombre=?", (nombre,))
-    conn.commit()
+    supabase.table("personas").delete().eq("nombre", nombre).execute()
 
-def get_historial():
-    c.execute("SELECT * FROM historial")
-    return c.fetchall()
+# HISTORIAL
+def get_hist():
+    res = supabase.table("historial").select("*").execute()
+    return res.data
 
-def guardar_historial(fecha, g1, g2):
-    c.execute(
-        "INSERT INTO historial VALUES (?, ?, ?)",
-        (fecha, ",".join(g1), ",".join(g2))
-    )
-    conn.commit()
+def guardar(fecha, g1, g2):
+    supabase.table("historial").insert({
+        "fecha": fecha,
+        "grupo1": ",".join(g1),
+        "grupo2": ",".join(g2)
+    }).execute()
 
+def borrar_hist():
+    supabase.table("historial").delete().neq("id", 0).execute()
+
+# LÓGICA
 def coincidencias():
-    hist = get_historial()
+    hist = get_hist()
     conteo = {}
 
-    for _, g1, g2 in hist:
-        grupos = [g1.split(","), g2.split(",")]
-        for grupo in grupos:
+    for h in hist:
+        for grupo in [h["grupo1"].split(","), h["grupo2"].split(",")]:
             for a, b in combinations(grupo, 2):
                 clave = tuple(sorted([a, b]))
                 conteo[clave] = conteo.get(clave, 0) + 1
 
     return conteo
 
-def generar(size_g1):
+def generar():
     personas = get_personas()
     n = len(personas)
 
-    if n < 2 or size_g1 < 1 or size_g1 >= n:
+    if n < 2:
         return None, None, None
+
+    total = len(get_hist())
+    base = n // 2
+
+    # alternancia automática
+    size_g1 = base if n % 2 == 0 else (base if total % 2 == 0 else base + 1)
 
     conteo = coincidencias()
     mejor = None
-    mejor_score = float("inf")
+    mejor_score = 999999
 
-    for _ in range(3000):
+    for _ in range(2000):
         random.shuffle(personas)
-
         g1 = personas[:size_g1]
         g2 = personas[size_g1:]
 
@@ -120,128 +91,65 @@ def generar(size_g1):
 
     if mejor:
         fecha = datetime.now().strftime('%d/%m/%Y')
-        guardar_historial(fecha, mejor[0], mejor[1])
+        guardar(fecha, mejor[0], mejor[1])
         return fecha, mejor[0], mejor[1]
 
     return None, None, None
 
-# ---------- UI ----------
-st.title("🎲 Sorteo de grupos desayuno")
+# -------- UI --------
 
-# PERSONAS
+st.title("🎲 Sorteo Pro")
+
+# AÑADIR PERSONAS
 st.subheader("👥 Personas")
+
+if "nuevo" not in st.session_state:
+    st.session_state.nuevo = ""
+
+def agregar():
+    nombre = st.session_state.nuevo.strip()
+    if nombre != "":
+        add_persona(nombre)
+    st.session_state.nuevo = ""
+
+st.text_input("Añadir persona", key="nuevo", on_change=agregar)
 
 personas = get_personas()
 
-if "nuevo_nombre" not in st.session_state:
-    st.session_state.nuevo_nombre = ""
+for p in personas:
+    col1, col2 = st.columns([4,1])
+    col1.write(p)
+    if col2.button("❌", key=p):
+        delete_persona(p)
+        st.rerun()
 
-def añadir_persona():
-    nombre = st.session_state.nuevo_nombre.strip()
-    if nombre != "" and nombre not in personas:
-        add_persona(nombre)
-    st.session_state.nuevo_nombre = ""
-
-st.text_input(
-    "Añadir persona",
-    key="nuevo_nombre",
-    placeholder="Escribe un nombre y pulsa ENTER",
-    on_change=añadir_persona
-)
-
-# LISTA
-st.markdown('<div class="card"><div class="card-title">Lista</div>', unsafe_allow_html=True)
-
-if personas:
-    for p in personas:
-        col1, col2 = st.columns([4,1])
-        col1.write(p)
-        if col2.button("❌", key=f"del_{p}"):
-            delete_persona(p)
-            st.rerun()
-else:
-    st.write("No hay personas")
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# CONFIG
-st.subheader("⚙️ Tamaño de grupos")
-
-n = len(personas)
-
-if n >= 2:
-    size_g1 = st.slider("Grupo 1", 1, n-1, n//2)
-else:
-    size_g1 = 1
-
-# GENERAR
+# SORTEO
 st.divider()
 
 if st.button("🎲 Generar sorteo"):
-    fecha, g1, g2 = generar(size_g1)
+    fecha, g1, g2 = generar()
 
     if fecha:
         st.success(f"Sorteo: {fecha}")
 
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="card-title">Grupo 1 ({len(g1)})</div>', unsafe_allow_html=True)
-        for p in g1:
-            st.markdown(f'<span class="chip">{p}</span>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.write("### Grupo 1")
+        st.write(", ".join(g1))
 
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="card-title">Grupo 2 ({len(g2)})</div>', unsafe_allow_html=True)
-        for p in g2:
-            st.markdown(f'<span class="chip">{p}</span>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.error("Configuración no válida")
+        st.write("### Grupo 2")
+        st.write(", ".join(g2))
 
 # HISTORIAL
 st.divider()
 st.subheader("📜 Historial")
 
-hist = get_historial()
+hist = get_hist()
 
-if not hist:
-    st.info("No hay historial")
-else:
-    for i, (fecha, g1, g2) in enumerate(reversed(hist)):
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+for h in reversed(hist):
+    st.write(f"**{h['fecha']}**")
+    st.write("Grupo 1:", h["grupo1"])
+    st.write("Grupo 2:", h["grupo2"])
+    st.write("---")
 
-        col1, col2 = st.columns([4,1])
-        col1.write(f"**{fecha}**")
-        col1.write(f"Grupo 1: {g1}")
-        col1.write(f"Grupo 2: {g2}")
-        
-        if col2.button("❌", key=f"h_{i}"):
-            c.execute(
-                "DELETE FROM historial WHERE fecha=? AND grupo1=? AND grupo2=?",
-                (fecha, g1, g2)
-            )
-            conn.commit()
-            st.rerun()
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# BORRAR TODO
-if st.button("🗑️ Borrar todo el historial"):
-    c.execute("DELETE FROM historial")
-    conn.commit()
+if st.button("🗑️ Borrar historial"):
+    borrar_hist()
     st.rerun()
-
-# STATS
-st.divider()
-st.subheader("📊 Estadísticas")
-
-stats = coincidencias()
-
-st.markdown('<div class="card">', unsafe_allow_html=True)
-
-if stats:
-    for (a, b), n in sorted(stats.items(), key=lambda x: -x[1])[:10]:
-        st.write(f"{a} - {b}: {n} veces")
-else:
-    st.write("Sin datos")
-
-st.markdown('</div>', unsafe_allow_html=True)
