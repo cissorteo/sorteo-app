@@ -9,7 +9,7 @@ from itertools import combinations
 # ====================================
 
 st.set_page_config(
-    page_title="🎲 Sorteo Pro",
+    page_title="🎲 Sorteo Pitufo",
     page_icon="🎲",
     layout="centered"
 )
@@ -171,7 +171,7 @@ def generar_sorteo(tam_grupo1):
 # UI
 # ====================================
 
-st.title("🎲 Sorteo Pro")
+st.title("🎲 Sorteo Pitufo")
 
 # ====================================
 # PERSONAS
