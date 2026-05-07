@@ -4,192 +4,331 @@ import random
 from datetime import datetime
 from itertools import combinations
 
-# -------- CONFIG --------
-st.set_page_config(page_title="Sorteo Pro", page_icon="🎲")
+# ====================================
+# CONFIG
+# ====================================
 
-# -------- CONEXIÓN --------
+st.set_page_config(
+    page_title="🎲 Sorteo Pro",
+    page_icon="🎲",
+    layout="centered"
+)
+
+# ====================================
+# SUPABASE
+# ====================================
+
 supabase = create_client(
     st.secrets["SUPABASE_URL"],
     st.secrets["SUPABASE_KEY"]
 )
 
-# -------- FUNCIONES --------
+# ====================================
+# ESTILO
+# ====================================
 
-# PERSONAS
+st.markdown("""
+<style>
+
+.stButton > button {
+    width: 100%;
+    border-radius: 12px;
+    height: 50px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.stTextInput > div > div > input {
+    border-radius: 10px;
+}
+
+.block-container {
+    padding-top: 2rem;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ====================================
+# FUNCIONES PERSONAS
+# ====================================
+
 def get_personas():
     res = supabase.table("personas").select("nombre").execute()
     return [x["nombre"] for x in res.data]
 
 def add_persona(nombre):
     try:
-        supabase.table("personas").insert({"nombre": nombre}).execute()
+        supabase.table("personas").insert({
+            "nombre": nombre
+        }).execute()
     except:
         pass
 
 def delete_persona(nombre):
-    supabase.table("personas").delete().eq("nombre", nombre).execute()
+    supabase.table("personas").delete().eq(
+        "nombre", nombre
+    ).execute()
 
-# HISTORIAL
+# ====================================
+# FUNCIONES HISTORIAL
+# ====================================
+
 def get_hist():
     res = supabase.table("historial").select("*").execute()
     return res.data
 
-def guardar(fecha, g1, g2):
+def guardar_historial(fecha, g1, g2):
+
     supabase.table("historial").insert({
         "fecha": fecha,
-        "grupo1": ",".join(g1),
-        "grupo2": ",".join(g2)
+        "grupo1": ", ".join(g1),
+        "grupo2": ", ".join(g2)
     }).execute()
 
-def borrar_hist():
-    supabase.table("historial").delete().neq("id", 0).execute()
+def borrar_historial():
+    supabase.table("historial").delete().neq(
+        "id", 0
+    ).execute()
 
-# LÓGICA
-def coincidencias():
-    hist = get_hist()
+# ====================================
+# ESTADÍSTICAS
+# ====================================
+
+def generar_estadisticas():
+
+    historial = get_hist()
     conteo = {}
 
-    for h in hist:
-        for grupo in [h["grupo1"].split(","), h["grupo2"].split(",")]:
+    for fila in historial:
+
+        grupos = [
+            fila["grupo1"].split(", "),
+            fila["grupo2"].split(", ")
+        ]
+
+        for grupo in grupos:
+
             for a, b in combinations(grupo, 2):
+
                 clave = tuple(sorted([a, b]))
+
                 conteo[clave] = conteo.get(clave, 0) + 1
 
     return conteo
 
-def generar():
-    personas = get_personas()
-    n = len(personas)
+# ====================================
+# GENERAR SORTEO
+# ====================================
 
-    if n < 2:
+def generar_sorteo(tam_grupo1):
+
+    personas = get_personas()
+
+    if len(personas) < 2:
         return None, None, None
 
-    total = len(get_hist())
-    base = n // 2
-
-    # alternancia automática
-    size_g1 = base if n % 2 == 0 else (base if total % 2 == 0 else base + 1)
-
-    conteo = coincidencias()
-    mejor = None
     mejor_score = 999999
+    mejor_g1 = None
+    mejor_g2 = None
 
-    for _ in range(2000):
+    estadisticas = generar_estadisticas()
+
+    for _ in range(3000):
+
         random.shuffle(personas)
-        g1 = personas[:size_g1]
-        g2 = personas[size_g1:]
+
+        grupo1 = personas[:tam_grupo1]
+        grupo2 = personas[tam_grupo1:]
 
         score = 0
-        for grupo in [g1, g2]:
+
+        for grupo in [grupo1, grupo2]:
+
             for a, b in combinations(grupo, 2):
+
                 clave = tuple(sorted([a, b]))
-                score += conteo.get(clave, 0)
+
+                score += estadisticas.get(clave, 0)
 
         if score < mejor_score:
+
             mejor_score = score
-            mejor = (g1[:], g2[:])
+            mejor_g1 = grupo1[:]
+            mejor_g2 = grupo2[:]
 
-    if mejor:
-        fecha = datetime.now().strftime('%d/%m/%Y')
-        guardar(fecha, mejor[0], mejor[1])
-        return fecha, mejor[0], mejor[1]
+    fecha = datetime.now().strftime("%d/%m/%Y")
 
-    return None, None, None
+    guardar_historial(
+        fecha,
+        mejor_g1,
+        mejor_g2
+    )
 
-# -------- UI --------
+    return fecha, mejor_g1, mejor_g2
+
+# ====================================
+# UI
+# ====================================
 
 st.title("🎲 Sorteo Pro")
 
-# AÑADIR PERSONAS
+# ====================================
+# PERSONAS
+# ====================================
+
 st.subheader("👥 Personas")
 
-if "nuevo" not in st.session_state:
-    st.session_state.nuevo = ""
+if "nuevo_nombre" not in st.session_state:
+    st.session_state.nuevo_nombre = ""
 
-def agregar():
-    nombre = st.session_state.nuevo.strip()
+def agregar_persona():
+
+    nombre = st.session_state.nuevo_nombre.strip()
+
     if nombre != "":
         add_persona(nombre)
-    st.session_state.nuevo = ""
 
-st.text_input("Añadir persona", key="nuevo", on_change=agregar)
+    st.session_state.nuevo_nombre = ""
+
+st.text_input(
+    "Añadir persona",
+    key="nuevo_nombre",
+    on_change=agregar_persona
+)
 
 personas = get_personas()
 
-for p in personas:
-    col1, col2 = st.columns([4,1])
-    col1.write(p)
-    if col2.button("❌", key=p):
-        delete_persona(p)
+for persona in personas:
+
+    col1, col2 = st.columns([5,1])
+
+    col1.write(persona)
+
+    if col2.button("❌", key=persona):
+
+        delete_persona(persona)
         st.rerun()
 
-# SORTEO
-st.divider()
-
-if st.button("🎲 Generar sorteo"):
-    fecha, g1, g2 = generar()
-
-    if fecha:
-        st.success(f"Sorteo: {fecha}")
-
-        st.write("### Grupo 1")
-        st.write(", ".join(g1))
-
-        st.write("### Grupo 2")
-        st.write(", ".join(g2))
-
-# HISTORIAL
-st.divider()
-st.subheader("📜 Historial")
-
-hist = get_hist()
-
-for h in reversed(hist):
-    st.write(f"**{h['fecha']}**")
-    st.write("Grupo 1:", h["grupo1"])
-    st.write("Grupo 2:", h["grupo2"])
-    st.write("---")
-
-if st.button("🗑️ Borrar historial"):
-    borrar_hist()
-    st.rerun()
-   # =========================
-# ESTADÍSTICAS
-# =========================
+# ====================================
+# CONFIGURACIÓN GRUPOS
+# ====================================
 
 st.markdown("---")
+
+st.subheader("⚙️ Configuración grupos")
+
+total_personas = len(personas)
+
+if total_personas >= 2:
+
+    tam_grupo1 = st.slider(
+        "Personas en Grupo 1",
+        min_value=1,
+        max_value=total_personas - 1,
+        value=total_personas // 2
+    )
+
+    tam_grupo2 = total_personas - tam_grupo1
+
+    st.info(
+        f"Grupo 1: {tam_grupo1} personas | "
+        f"Grupo 2: {tam_grupo2} personas"
+    )
+
+# ====================================
+# BOTÓN SORTEO
+# ====================================
+
+st.markdown("---")
+
+if st.button("🎲 Generar sorteo"):
+
+    if total_personas < 2:
+
+        st.error("Necesitas al menos 2 personas")
+
+    else:
+
+        fecha, grupo1, grupo2 = generar_sorteo(
+            tam_grupo1
+        )
+
+        st.success(f"Sorteo generado ({fecha})")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            st.subheader("Grupo 1")
+
+            for p in grupo1:
+                st.write(f"✅ {p}")
+
+        with col2:
+
+            st.subheader("Grupo 2")
+
+            for p in grupo2:
+                st.write(f"✅ {p}")
+
+# ====================================
+# HISTORIAL
+# ====================================
+
+st.markdown("---")
+
+st.subheader("📜 Historial")
+
+historial = get_hist()
+
+for fila in reversed(historial):
+
+    with st.expander(f"📅 {fila['fecha']}"):
+
+        st.write("### Grupo 1")
+        st.write(fila["grupo1"])
+
+        st.write("### Grupo 2")
+        st.write(fila["grupo2"])
+
+# ====================================
+# BORRAR HISTORIAL
+# ====================================
+
+if st.button("🗑️ Borrar historial"):
+
+    borrar_historial()
+
+    st.success("Historial borrado")
+
+    st.rerun()
+
+# ====================================
+# ESTADÍSTICAS
+# ====================================
+
+st.markdown("---")
+
 st.subheader("📊 Estadísticas")
 
-historial_stats = (
-    supabase.table("historial")
-    .select("*")
-    .execute()
-)
+stats = generar_estadisticas()
 
-conteo = {}
-
-if historial_stats.data:
-
-    for fila in historial_stats.data:
-
-        g1 = fila["grupo1"].split(", ")
-        g2 = fila["grupo2"].split(", ")
-
-        for persona in g1:
-            conteo[persona] = conteo.get(persona, 0) + 1
-
-        for persona in g2:
-            conteo[persona] = conteo.get(persona, 0) + 1
+if stats:
 
     ranking = sorted(
-        conteo.items(),
+        stats.items(),
         key=lambda x: x[1],
         reverse=True
     )
 
-    for nombre, veces in ranking:
-        st.write(f"👤 {nombre}: {veces} sorteos")
+    for pareja, veces in ranking[:15]:
+
+        st.write(
+            f"👥 {pareja[0]} + {pareja[1]} "
+            f"→ {veces} veces"
+        )
 
 else:
-    st.info("Aún no hay estadísticas.")
-    
+
+    st.info("Todavía no hay estadísticas")
