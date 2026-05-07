@@ -153,3 +153,43 @@ for h in reversed(hist):
 if st.button("🗑️ Borrar historial"):
     borrar_hist()
     st.rerun()
+   # =========================
+# ESTADÍSTICAS
+# =========================
+
+st.markdown("---")
+st.subheader("📊 Estadísticas")
+
+historial_stats = (
+    supabase.table("historial")
+    .select("*")
+    .execute()
+)
+
+conteo = {}
+
+if historial_stats.data:
+
+    for fila in historial_stats.data:
+
+        g1 = fila["grupo1"].split(", ")
+        g2 = fila["grupo2"].split(", ")
+
+        for persona in g1:
+            conteo[persona] = conteo.get(persona, 0) + 1
+
+        for persona in g2:
+            conteo[persona] = conteo.get(persona, 0) + 1
+
+    ranking = sorted(
+        conteo.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    for nombre, veces in ranking:
+        st.write(f"👤 {nombre}: {veces} sorteos")
+
+else:
+    st.info("Aún no hay estadísticas.")
+    
